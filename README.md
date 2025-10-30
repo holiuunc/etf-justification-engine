@@ -57,8 +57,3 @@ The application's investment philosophy is centered around a **Moderate Growth**
 -   Node.js and npm
 -   Python 3.8+ and pip
 -   Git
-
-**1. Clone the repository:**
-```bash
-git clone https://github.com/your-username/econ425-advisor.git
-cd econ425-advisor
