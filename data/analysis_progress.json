@@ -1,0 +1,7 @@
+{
+  "running": true,
+  "progress": 0,
+  "message": "Error: Traceback (most recent call last):\n  File \"/app/main.py\", line 30, in <module>\n    from data.models ",
+  "started_at": "2025-11-14T03:12:04.032690",
+  "estimated_completion": null
+}

@@ -1,0 +1,124 @@
+# ETF Justification Engine - Docker Compose Configuration
+# Orchestrates backend and frontend services with volume mounts for data persistence
+
+services:
+  # ============================================================================
+  # Backend Analysis Engine + API Server
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: etf-backend
+
+    # Environment variables (API keys)
+    env_file:
+      - .env
+
+    # Volume mounts for data persistence and live code reload
+    volumes:
+      # Data directories (persisted on host)
+      - ./data:/data
+
+      # Backend code (for development - live reload)
+      - ./backend:/app
+
+      # Exclude Python cache from sync
+      - /app/__pycache__
+      - /app/**/__pycache__
+
+    # Working directory
+    working_dir: /app
+
+    # Run FastAPI server
+    command: uvicorn api.server:app --host 0.0.0.0 --port 8000 --reload
+
+    # Expose API port
+    ports:
+      - "8000:8000"
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Resource limits (optional)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # Networks
+    networks:
+      - etf-network
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ============================================================================
+  # Frontend - React + TypeScript Dashboard
+  # ============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: etf-frontend
+
+    # Port mapping (Nginx runs on 80 internally, mapped to 3000 externally)
+    ports:
+      - "3000:80"
+
+    # Volume mounts for development (optional - for live reload)
+    # Comment out for production builds
+    volumes:
+      - ./data:/usr/share/nginx/html/data:ro
+
+    # Environment variables for build-time injection
+    environment:
+      - VITE_API_BASE_URL=/data
+
+    # Wait for backend to be healthy
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+    # Networks
+    networks:
+      - etf-network
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  etf-network:
+    driver: bridge
+
+volumes:
+  # Named volumes for persistence (optional)
+  etf-data:
+    driver: local
